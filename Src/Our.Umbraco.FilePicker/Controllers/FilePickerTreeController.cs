@@ -43,7 +43,7 @@ namespace Our.Umbraco.FilePicker.Controllers
 		private TreeNodeCollection GetFileTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
         {
             var treeNodes = new TreeNodeCollection();
-            var files = GetFiles(virtualPath, filter);
+            var files = GetFiles(virtualPath, filter).OrderBy(f => f.Name);
 
             treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, file)));
 
@@ -53,7 +53,7 @@ namespace Our.Umbraco.FilePicker.Controllers
 		private TreeNodeCollection GetFolderTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
         {
 			var treeNodes = new TreeNodeCollection();
-            var dirs = GetDirectories(virtualPath);
+            var dirs = GetAllDirectories(virtualPath);
 
             treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, dir, filter)));
 
@@ -70,7 +70,7 @@ namespace Our.Umbraco.FilePicker.Controllers
         private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, DirectoryInfo dir, string[] filter)
         {
             string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-            bool hasChildren = GetDirectories(id).Any() || GetFiles(id, filter).Any();
+            bool hasChildren = HasDirectoryChildren(id, filter);
 
             return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
         }
@@ -80,7 +80,15 @@ namespace Our.Umbraco.FilePicker.Controllers
 			return null;
 		}
 
-        public IEnumerable<DirectoryInfo> GetDirectories(string virtualPath)
+        private bool HasDirectoryChildren(string virtualPath, string[] filter)
+        {
+            var path = IOHelper.MapPath("~" + virtualPath);
+            var dir = new DirectoryInfo(path);
+
+            return dir.EnumerateDirectories().Any() || GetFiles(virtualPath, filter).Any();
+        }
+
+        public IEnumerable<DirectoryInfo> GetAllDirectories(string virtualPath)
         {
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
@@ -92,15 +100,12 @@ namespace Our.Umbraco.FilePicker.Controllers
         {
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
+            var files = dir.EnumerateFiles();
 
             if (filter != null && filter.Any())
-            {
-                var files = dir.EnumerateFiles();
+                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
 
-                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).OrderBy(f => f.Name);
-            }
-
-            return dir.GetFiles().OrderBy(f => f.Name);
+            return files;
         }
     }
 }
