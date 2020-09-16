@@ -19,12 +19,14 @@ function filePickerController($scope, dialogService) {
     };
 
     function populate(data) {
-        var file = $scope.model.config.folder + data;
+        var file = data;
+
         if ($scope.model.value.indexOf(file) === -1) {
             $scope.model.value.push(file);
         }
     };
 };
+
 angular.module("umbraco").controller("Our.Umbraco.FilePickerController", filePickerController);
 
 function folderPickerController($scope, dialogService) {
@@ -34,11 +36,12 @@ function folderPickerController($scope, dialogService) {
             callback: populate
         });
     };
-    function populate(data) {
-        $scope.model.value = "/" + data;
-    };
 
+    function populate(data) {
+        $scope.model.value = data;
+    };
 };
+
 angular.module("umbraco").controller("Our.Umbraco.FolderPickerController", folderPickerController);
 
 function filePickerDialogController($scope, dialogService) {
@@ -48,10 +51,12 @@ function filePickerDialogController($scope, dialogService) {
     function nodeSelectHandler(ev, args) {
         args.event.preventDefault();
         args.event.stopPropagation();
+
         if (args.node.icon !== "icon-folder")
             $scope.submit(args.node.id);
     };
 };
+
 angular.module("umbraco").controller("Our.Umbraco.FilePickerDialogController", filePickerDialogController);
 
 function folderPickerDialogController($scope, dialogService) {
@@ -64,4 +69,5 @@ function folderPickerDialogController($scope, dialogService) {
         $scope.submit(args.node.id);
     };
 };
+
 angular.module("umbraco").controller("Our.Umbraco.FolderPickerDialogController", folderPickerDialogController);
