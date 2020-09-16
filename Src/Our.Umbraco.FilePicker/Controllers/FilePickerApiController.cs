@@ -14,9 +14,11 @@ namespace Our.Umbraco.FilePicker.Controllers
 		public IEnumerable<DirectoryInfo> GetFolders(string folder, string[] filter)
 		{
 			var path = IOHelper.MapPath("~/" + folder.TrimStart('~', '/'));
-			if (filter != null && filter[0] != ".")
+
+            if (filter != null && filter[0] != ".")
 			{
-				IEnumerable<DirectoryInfo> dirs = new DirectoryInfo(path).EnumerateDirectories();
+				var dirs = new DirectoryInfo(path).EnumerateDirectories();
+
 				return dirs.Where(d => d.EnumerateFiles().Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).Any());
 			}
 
@@ -26,8 +28,8 @@ namespace Our.Umbraco.FilePicker.Controllers
 		public IEnumerable<FileInfo> GetFiles(string folder, string[] filter )
 		{
 			var path = IOHelper.MapPath("~/" + folder.TrimStart('~', '/'));
-			DirectoryInfo dir = new DirectoryInfo(path);
-			IEnumerable <FileInfo> files = dir.EnumerateFiles();
+			var dir = new DirectoryInfo(path);
+			var files = dir.EnumerateFiles();
 
 			if (filter != null && filter[0] != ".")
 				return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
@@ -35,5 +37,4 @@ namespace Our.Umbraco.FilePicker.Controllers
 			return new DirectoryInfo(path).GetFiles();
 		}
 	}
-
 }
