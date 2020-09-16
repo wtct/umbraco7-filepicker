@@ -16,72 +16,66 @@ namespace Our.Umbraco.FilePicker.Controllers
 		protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
 		{
             string qsStartFolder = queryStrings.Get("startfolder");
+            string qsFilter = queryStrings.Get("filter");
+
+            string rootVirtualPath = !string.IsNullOrEmpty(qsStartFolder) ? qsStartFolder : "/";
+            var rootPath = IOHelper.MapPath("~" + rootVirtualPath);
+            string virtualPath = id == "-1" ? "/" : id;
+            var filter = qsFilter.Split(',').Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
 
             if (!string.IsNullOrWhiteSpace(qsStartFolder))
 			{
-				string folder = id == "-1" ? qsStartFolder : id;
+                virtualPath = id == "-1" ? qsStartFolder : id;
 
-                folder = folder.EnsureStartsWith("/");
+                var treeNodes = GetFolderTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
+                var fileTreeNodes = GetFileTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
 
-                var treeNodes = GetFolderTreeNodes(folder, queryStrings);
-
-                treeNodes.AddRange(GetFileTreeNodes(folder, queryStrings));
+                treeNodes.AddRange(fileTreeNodes);
 
                 return treeNodes;
 			}
 
-			return GetFolderTreeNodes(id == "-1" ? "" : id, queryStrings);
-		}
+            return GetFolderTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
+        }
 
-		private TreeNodeCollection GetFileTreeNodes(string folder, FormDataCollection queryStrings)
-		{
-			if (string.IsNullOrWhiteSpace(folder))
-				return null;
-
-            var qsStartFolder = queryStrings.Get("startfolder");
-            var filter = queryStrings.Get("filter").Split(',').Select(a=>a.Trim().EnsureStartsWith(".")).ToArray();
-
-			var path = IOHelper.MapPath(folder);
-			var rootPath = IOHelper.MapPath(queryStrings.Get("startfolder"));
-
+		private TreeNodeCollection GetFileTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
+        {
             var treeNodes = new TreeNodeCollection();
             var pickerApiController = new FilePickerApiController();
 
-            var files = pickerApiController.GetFiles(folder, filter);
+            var files = pickerApiController.GetFiles(virtualPath, filter);
 
-            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, path, queryStrings, file)));
+            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, file)));
 
-			return treeNodes;
+            return treeNodes;
 		}
 
-		private TreeNodeCollection GetFolderTreeNodes(string parent, FormDataCollection queryStrings)
-		{
-			var filter = queryStrings.Get("filter").Split(',').Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
-
+		private TreeNodeCollection GetFolderTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
+        {
 			var treeNodes = new TreeNodeCollection();
             var pickerApiController = new FilePickerApiController();
 
-            var dirs = pickerApiController.GetDirectories(parent, filter);
+            var dirs = pickerApiController.GetDirectories(virtualPath, filter);
 
-            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(parent, queryStrings, pickerApiController, dir, filter)));
+            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, pickerApiController, dir, filter)));
 
-			return treeNodes;
+            return treeNodes;
 		}
 
-        private TreeNode CreateFileTreeNode(string rootPath, string path, FormDataCollection queryStrings, FileInfo file)
+        private TreeNode CreateFileTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, FileInfo file)
         {
-            string id = file.FullName.Replace(rootPath, "").Replace("\\", "/");
+            string id = file.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
 
-            return CreateTreeNode(id, path, queryStrings, file.Name, "icon-document", false);
+            return CreateTreeNode(id, virtualPath, queryStrings, file.Name, "icon-document", false);
         }
 
-        private TreeNode CreateFolderTreeNode(string parent, FormDataCollection queryStrings, FilePickerApiController pickerApiController, DirectoryInfo dir, string[] filter)
+        private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, FilePickerApiController pickerApiController, DirectoryInfo dir, string[] filter)
         {
-            string id = dir.FullName.Replace(IOHelper.MapPath("~"), "").Replace("\\", "/");
+            string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
             bool hasChildren = filter[0] == "." ? dir.EnumerateDirectories().Any() 
                 || pickerApiController.GetFiles(id, filter).Any() : pickerApiController.GetFiles(id, filter).Any();
 
-            return CreateTreeNode(id, "~/" + parent, queryStrings, dir.Name, "icon-folder", hasChildren);
+            return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
         }
 
         protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)

@@ -19,7 +19,7 @@ function filePickerController($scope, dialogService) {
     };
 
     function populate(data) {
-        var file = $scope.model.config.folder + data;
+        var file = data;
 
         if ($scope.model.value.indexOf(file) === -1) {
             $scope.model.value.push(file);
@@ -38,7 +38,7 @@ function folderPickerController($scope, dialogService) {
     };
 
     function populate(data) {
-        $scope.model.value = "/" + data;
+        $scope.model.value = data;
     };
 };
 
