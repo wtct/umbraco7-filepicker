@@ -14,27 +14,31 @@ namespace Our.Umbraco.FilePicker.Controllers
 		public IEnumerable<DirectoryInfo> GetDirectories(string virtualPath, string[] filter)
 		{
             var path = IOHelper.MapPath("~" + virtualPath);
+            var dir = new DirectoryInfo(path);
 
             if (filter != null && filter[0] != ".")
 			{
-				var dirs = new DirectoryInfo(path).EnumerateDirectories();
+				var dirs = dir.EnumerateDirectories();
 
 				return dirs.Where(d => d.EnumerateFiles().Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).Any());
 			}
 
-			return new DirectoryInfo(path).GetDirectories("*");
+			return dir.GetDirectories("*");
 		}
 
 		public IEnumerable<FileInfo> GetFiles(string virtualPath, string[] filter )
 		{
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
-			var files = dir.EnumerateFiles();
 
-			if (filter != null && filter[0] != ".")
-				return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
+            if (filter != null && filter[0] != ".")
+            {
+                var files = dir.EnumerateFiles();
 
-			return new DirectoryInfo(path).GetFiles();
-		}
+                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
+            }
+
+            return dir.GetFiles();
+        }
 	}
 }
