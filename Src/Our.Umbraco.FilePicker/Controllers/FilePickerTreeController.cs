@@ -70,7 +70,7 @@ namespace Our.Umbraco.FilePicker.Controllers
         private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, DirectoryInfo dir, string[] filter)
         {
             string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-            bool hasChildren = HasDirectoryChildren(id, filter);
+            bool hasChildren = dir.EnumerateDirectories().Any() || GetFiles(dir, filter).Any();
 
             return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
         }
@@ -79,14 +79,6 @@ namespace Our.Umbraco.FilePicker.Controllers
 		{
 			return null;
 		}
-
-        private bool HasDirectoryChildren(string virtualPath, string[] filter)
-        {
-            var path = IOHelper.MapPath("~" + virtualPath);
-            var dir = new DirectoryInfo(path);
-
-            return dir.EnumerateDirectories().Any() || GetFiles(virtualPath, filter).Any();
-        }
 
         public IEnumerable<DirectoryInfo> GetAllDirectories(string virtualPath)
         {
@@ -100,6 +92,12 @@ namespace Our.Umbraco.FilePicker.Controllers
         {
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
+
+            return GetFiles(dir, filter);
+        }
+
+        public IEnumerable<FileInfo> GetFiles(DirectoryInfo dir, string[] filter)
+        {
             var files = dir.EnumerateFiles();
 
             if (filter != null && filter.Any())
