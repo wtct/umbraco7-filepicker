@@ -56,6 +56,7 @@ function filePickerDialogController($scope, dialogService) {
             $scope.submit(args.node.id);
     };
 };
+
 angular.module("umbraco").controller("Our.Umbraco.FilePickerDialogController", filePickerDialogController);
 
 function folderPickerDialogController($scope, dialogService) {
