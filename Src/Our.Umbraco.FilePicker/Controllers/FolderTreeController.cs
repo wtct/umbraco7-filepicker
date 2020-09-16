@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http.Formatting;
@@ -21,7 +22,7 @@ namespace Our.Umbraco.FilePicker.Controllers
             string rootVirtualPath = !string.IsNullOrEmpty(qsStartFolder) ? qsStartFolder : "/";
             var rootPath = IOHelper.MapPath("~" + rootVirtualPath);
             string virtualPath = id == "-1" ? "/" : id;
-            var filter = qsFilter.Split(',').Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
+            var filter = qsFilter.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
 
             if (!string.IsNullOrWhiteSpace(qsStartFolder))
 			{
@@ -55,7 +56,7 @@ namespace Our.Umbraco.FilePicker.Controllers
 			var treeNodes = new TreeNodeCollection();
             var pickerApiController = new FilePickerApiController();
 
-            var dirs = pickerApiController.GetDirectories(virtualPath, filter);
+            var dirs = pickerApiController.GetDirectories(virtualPath);
 
             treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, pickerApiController, dir, filter)));
 
@@ -72,8 +73,7 @@ namespace Our.Umbraco.FilePicker.Controllers
         private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, FilePickerApiController pickerApiController, DirectoryInfo dir, string[] filter)
         {
             string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-            bool hasChildren = filter[0] == "." ? dir.EnumerateDirectories().Any() 
-                || pickerApiController.GetFiles(id, filter).Any() : pickerApiController.GetFiles(id, filter).Any();
+            bool hasChildren = pickerApiController.GetDirectories(id).Any() || pickerApiController.GetFiles(id, filter).Any();
 
             return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
         }

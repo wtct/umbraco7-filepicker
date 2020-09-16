@@ -11,17 +11,10 @@ namespace Our.Umbraco.FilePicker.Controllers
 	[PluginController("FilePicker")]
 	public class FilePickerApiController : UmbracoAuthorizedJsonController
 	{
-		public IEnumerable<DirectoryInfo> GetDirectories(string virtualPath, string[] filter)
+		public IEnumerable<DirectoryInfo> GetDirectories(string virtualPath)
 		{
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
-
-            if (filter != null && filter[0] != ".")
-			{
-				var dirs = dir.EnumerateDirectories();
-
-				return dirs.Where(d => d.EnumerateFiles().Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).Any());
-			}
 
 			return dir.GetDirectories();
 		}
@@ -31,7 +24,7 @@ namespace Our.Umbraco.FilePicker.Controllers
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
 
-            if (filter != null && filter[0] != ".")
+            if (filter != null && filter.Any())
             {
                 var files = dir.EnumerateFiles();
 
