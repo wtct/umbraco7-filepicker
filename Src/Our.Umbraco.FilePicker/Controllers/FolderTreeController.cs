@@ -1,7 +1,8 @@
+using System.IO;
 using System.Linq;
 using System.Net.Http.Formatting;
-using Umbraco.Core.IO;
 using Umbraco.Core;
+using Umbraco.Core.IO;
 using Umbraco.Web.Models.Trees;
 using Umbraco.Web.Mvc;
 using Umbraco.Web.Trees;
@@ -46,9 +47,9 @@ namespace Our.Umbraco.FilePicker.Controllers
             var treeNodes = new TreeNodeCollection();
             var pickerApiController = new FilePickerApiController();
 
-            treeNodes.AddRange(pickerApiController.GetFiles(folder, filter)
-				.Select(file => CreateTreeNode(file.FullName.Replace(rootPath, "").Replace("\\", "/"),
-					path, queryStrings, file.Name, "icon-document", false)));
+            var files = pickerApiController.GetFiles(folder, filter);
+
+            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, path, queryStrings, file)));
 
 			return treeNodes;
 		}
@@ -60,15 +61,30 @@ namespace Our.Umbraco.FilePicker.Controllers
 			var treeNodes = new TreeNodeCollection();
             var pickerApiController = new FilePickerApiController();
 
-            treeNodes.AddRange(pickerApiController.GetFolders(parent,filter)
-				.Select(dir => CreateTreeNode(dir.FullName.Replace(IOHelper.MapPath("~"), "").Replace("\\", "/"),
-					"~/" + parent, queryStrings, dir.Name,
-					"icon-folder", filter[0]=="." ? dir.EnumerateDirectories().Any() || pickerApiController.GetFiles(dir.FullName.Replace(IOHelper.MapPath("~"), "").Replace("\\", "/"), filter).Any() : pickerApiController.GetFiles(dir.FullName.Replace(IOHelper.MapPath("~"), "").Replace("\\", "/"), filter).Any())));
+            var dirs = pickerApiController.GetDirectories(parent, filter);
+
+            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(parent, queryStrings, pickerApiController, dir, filter)));
 
 			return treeNodes;
 		}
 
-		protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        private TreeNode CreateFileTreeNode(string rootPath, string path, FormDataCollection queryStrings, FileInfo file)
+        {
+            string id = file.FullName.Replace(rootPath, "").Replace("\\", "/");
+
+            return CreateTreeNode(id, path, queryStrings, file.Name, "icon-document", false);
+        }
+
+        private TreeNode CreateFolderTreeNode(string parent, FormDataCollection queryStrings, FilePickerApiController pickerApiController, DirectoryInfo dir, string[] filter)
+        {
+            string id = dir.FullName.Replace(IOHelper.MapPath("~"), "").Replace("\\", "/");
+            bool hasChildren = filter[0] == "." ? dir.EnumerateDirectories().Any() 
+                || pickerApiController.GetFiles(id, filter).Any() : pickerApiController.GetFiles(id, filter).Any();
+
+            return CreateTreeNode(id, "~/" + parent, queryStrings, dir.Name, "icon-folder", hasChildren);
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
 		{
 			return null;
 		}
