@@ -23,7 +23,7 @@ namespace Our.Umbraco.FilePicker.Controllers
 				return dirs.Where(d => d.EnumerateFiles().Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).Any());
 			}
 
-			return dir.GetDirectories("*");
+			return dir.GetDirectories();
 		}
 
 		public IEnumerable<FileInfo> GetFiles(string virtualPath, string[] filter )
