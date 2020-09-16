@@ -85,7 +85,7 @@ namespace Our.Umbraco.FilePicker.Controllers
             var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
 
-            return dir.GetDirectories();
+            return dir.GetDirectories().OrderBy(d => d.Name);
         }
 
         public IEnumerable<FileInfo> GetFiles(string virtualPath, string[] filter)
@@ -97,10 +97,10 @@ namespace Our.Umbraco.FilePicker.Controllers
             {
                 var files = dir.EnumerateFiles();
 
-                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
+                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase)).OrderBy(f => f.Name);
             }
 
-            return dir.GetFiles();
+            return dir.GetFiles().OrderBy(f => f.Name);
         }
     }
 }
