@@ -210,8 +210,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controllers\FilePickerApiController.cs" />
-    <Compile Include="Controllers\FolderTreeController.cs" />
+    <Compile Include="Controllers\FilePickerTreeController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http.Formatting;
@@ -10,9 +11,9 @@ using Umbraco.Web.Trees;
 
 namespace Our.Umbraco.FilePicker.Controllers
 {
-	[Tree("dummy", "fileTree", "Folders")]
+	[Tree("filePickerDialog", "filePickerTree", "Folders and files")]
 	[PluginController("FilePicker")]
-	public class FolderTreeController : TreeController
+	public class FilePickerTreeController : TreeController
 	{
 		protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
 		{
@@ -42,9 +43,7 @@ namespace Our.Umbraco.FilePicker.Controllers
 		private TreeNodeCollection GetFileTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
         {
             var treeNodes = new TreeNodeCollection();
-            var pickerApiController = new FilePickerApiController();
-
-            var files = pickerApiController.GetFiles(virtualPath, filter);
+            var files = GetFiles(virtualPath, filter);
 
             treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, file)));
 
@@ -54,11 +53,9 @@ namespace Our.Umbraco.FilePicker.Controllers
 		private TreeNodeCollection GetFolderTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
         {
 			var treeNodes = new TreeNodeCollection();
-            var pickerApiController = new FilePickerApiController();
+            var dirs = GetDirectories(virtualPath);
 
-            var dirs = pickerApiController.GetDirectories(virtualPath);
-
-            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, pickerApiController, dir, filter)));
+            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, dir, filter)));
 
             return treeNodes;
 		}
@@ -70,10 +67,10 @@ namespace Our.Umbraco.FilePicker.Controllers
             return CreateTreeNode(id, virtualPath, queryStrings, file.Name, "icon-document", false);
         }
 
-        private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, FilePickerApiController pickerApiController, DirectoryInfo dir, string[] filter)
+        private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, DirectoryInfo dir, string[] filter)
         {
             string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-            bool hasChildren = pickerApiController.GetDirectories(id).Any() || pickerApiController.GetFiles(id, filter).Any();
+            bool hasChildren = GetDirectories(id).Any() || GetFiles(id, filter).Any();
 
             return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
         }
@@ -82,5 +79,28 @@ namespace Our.Umbraco.FilePicker.Controllers
 		{
 			return null;
 		}
-	}
+
+        public IEnumerable<DirectoryInfo> GetDirectories(string virtualPath)
+        {
+            var path = IOHelper.MapPath("~" + virtualPath);
+            var dir = new DirectoryInfo(path);
+
+            return dir.GetDirectories();
+        }
+
+        public IEnumerable<FileInfo> GetFiles(string virtualPath, string[] filter)
+        {
+            var path = IOHelper.MapPath("~" + virtualPath);
+            var dir = new DirectoryInfo(path);
+
+            if (filter != null && filter.Any())
+            {
+                var files = dir.EnumerateFiles();
+
+                return files.Where(f => filter.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
+            }
+
+            return dir.GetFiles();
+        }
+    }
 }
