@@ -11,86 +11,113 @@ using Umbraco.Web.Trees;
 
 namespace Our.Umbraco.FilePicker.Controllers
 {
-	[Tree("filePickerDialog", "filePickerTree", "Folders and files")]
-	[PluginController("FilePicker")]
-	public class FilePickerTreeController : TreeController
-	{
-		protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
-		{
-            string qsStartFolder = queryStrings.Get("startfolder");
-            string qsFilter = queryStrings.Get("filter");
+    [Tree("filePickerDialog", "filePickerTree", "Folders and files")]
+    [PluginController("FilePicker")]
+    public class FilePickerTreeController : TreeController
+    {
+        bool _isFolderPicker;
 
-            string rootVirtualPath = !string.IsNullOrEmpty(qsStartFolder) ? qsStartFolder : "/";
-            var rootPath = IOHelper.MapPath("~" + rootVirtualPath);
-            string virtualPath = id == "-1" ? "/" : id;
-            var filter = qsFilter.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
+        string _rootVirtualPath;
+        string _rootPath;
 
-            if (!string.IsNullOrWhiteSpace(qsStartFolder))
-			{
-                virtualPath = id == "-1" ? qsStartFolder : id;
+        string _currentVirtualPath;
+        string _currentPath;
 
-                var treeNodes = GetFolderTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
-                var fileTreeNodes = GetFileTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
+        string[] _fileExtensionFilters;
+
+        FormDataCollection _queryStrings;
+
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            Inicjalize(id, queryStrings);
+
+            if (!_isFolderPicker)
+            {
+                var treeNodes = GetFolderTreeNodes();
+                var fileTreeNodes = GetFileTreeNodes();
 
                 treeNodes.AddRange(fileTreeNodes);
 
                 return treeNodes;
-			}
-
-            return GetFolderTreeNodes(rootPath, rootVirtualPath, virtualPath, filter, queryStrings);
+            }
+            else
+                return GetFolderTreeNodes();
         }
 
-		private TreeNodeCollection GetFileTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
+        private void Inicjalize(string id, FormDataCollection queryStrings)
+        {
+            _queryStrings = queryStrings;
+
+            string qsStartFolder = _queryStrings.Get("startfolder");
+            string qsFilter = _queryStrings.Get("filter");
+
+            if (string.IsNullOrWhiteSpace(qsStartFolder))
+            {
+                _isFolderPicker = true;
+                _rootVirtualPath = id == "-1" ? "/" : id;
+                _currentVirtualPath = id == "-1" ? "/" : id;
+            }
+            else
+            {
+                _rootVirtualPath = qsStartFolder;
+                _currentVirtualPath = id == "-1" ? qsStartFolder : id;
+            }
+
+            _rootPath = IOHelper.MapPath("~" + _rootVirtualPath);
+            _currentPath = IOHelper.MapPath("~" + _currentVirtualPath);
+
+            _fileExtensionFilters = qsFilter.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
+        }
+
+        private TreeNodeCollection GetFileTreeNodes()
         {
             var treeNodes = new TreeNodeCollection();
-            var files = GetFiles(virtualPath, filter).OrderBy(f => f.Name);
+            var files = GetFiles(_currentPath, _fileExtensionFilters).OrderBy(f => f.Name);
 
-            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, file)));
-
-            return treeNodes;
-		}
-
-		private TreeNodeCollection GetFolderTreeNodes(string rootPath, string rootVirtualPath, string virtualPath, string[] filter, FormDataCollection queryStrings)
-        {
-			var treeNodes = new TreeNodeCollection();
-            var dirs = GetAllDirectories(virtualPath);
-
-            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(rootPath, rootVirtualPath, virtualPath, queryStrings, dir, filter)));
+            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(file)));
 
             return treeNodes;
-		}
-
-        private TreeNode CreateFileTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, FileInfo file)
-        {
-            string id = file.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-
-            return CreateTreeNode(id, virtualPath, queryStrings, file.Name, "icon-document", false);
         }
 
-        private TreeNode CreateFolderTreeNode(string rootPath, string rootVirtualPath, string virtualPath, FormDataCollection queryStrings, DirectoryInfo dir, string[] filter)
+        private TreeNodeCollection GetFolderTreeNodes()
         {
-            string id = dir.FullName.Replace(rootPath, rootVirtualPath).Replace("\\", "/");
-            bool hasChildren = dir.EnumerateDirectories().Any() || GetFiles(dir, filter).Any();
+            var treeNodes = new TreeNodeCollection();
+            var dirs = GetAllDirectories(_currentPath);
 
-            return CreateTreeNode(id, virtualPath, queryStrings, dir.Name, "icon-folder", hasChildren);
+            treeNodes.AddRange(dirs.Select(dir => CreateFolderTreeNode(dir)));
+
+            return treeNodes;
+        }
+
+        private TreeNode CreateFileTreeNode(FileInfo file)
+        {
+            string virtualPath = file.FullName.Replace(_rootPath, _rootVirtualPath).Replace("\\", "/");
+
+            return CreateTreeNode(virtualPath, _currentVirtualPath, _queryStrings, file.Name, "icon-document", false);
+        }
+
+        private TreeNode CreateFolderTreeNode(DirectoryInfo dir)
+        {
+            string virtualPath = dir.FullName.Replace(_rootPath, _rootVirtualPath).Replace("\\", "/");
+            bool hasChildren = dir.EnumerateDirectories().Any() || !_isFolderPicker && GetFiles(dir, _fileExtensionFilters).Any();
+
+            return CreateTreeNode(virtualPath, _currentVirtualPath, _queryStrings, dir.Name, "icon-folder", hasChildren);
         }
 
         protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
-		{
-			return null;
-		}
-
-        public IEnumerable<DirectoryInfo> GetAllDirectories(string virtualPath)
         {
-            var path = IOHelper.MapPath("~" + virtualPath);
+            return null;
+        }
+
+        public IEnumerable<DirectoryInfo> GetAllDirectories(string path)
+        {
             var dir = new DirectoryInfo(path);
 
             return dir.GetDirectories().OrderBy(d => d.Name);
         }
 
-        public IEnumerable<FileInfo> GetFiles(string virtualPath, string[] filter)
+        public IEnumerable<FileInfo> GetFiles(string path, string[] filter)
         {
-            var path = IOHelper.MapPath("~" + virtualPath);
             var dir = new DirectoryInfo(path);
 
             return GetFiles(dir, filter);
