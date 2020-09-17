@@ -31,17 +31,16 @@ namespace Our.Umbraco.FilePicker.Controllers
         {
             Inicjalize(id, queryStrings);
 
+            var treeNodes = GetFolderTreeNodes();
+
             if (!_isFolderPicker)
             {
-                var treeNodes = GetFolderTreeNodes();
                 var fileTreeNodes = GetFileTreeNodes();
 
                 treeNodes.AddRange(fileTreeNodes);
-
-                return treeNodes;
             }
-            else
-                return GetFolderTreeNodes();
+
+            return treeNodes;
         }
 
         private void Inicjalize(string id, FormDataCollection queryStrings)
@@ -69,16 +68,6 @@ namespace Our.Umbraco.FilePicker.Controllers
             _fileExtensionFilters = qsFilter.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim().EnsureStartsWith(".")).ToArray();
         }
 
-        private TreeNodeCollection GetFileTreeNodes()
-        {
-            var treeNodes = new TreeNodeCollection();
-            var files = GetFiles(_currentPath, _fileExtensionFilters).OrderBy(f => f.Name);
-
-            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(file)));
-
-            return treeNodes;
-        }
-
         private TreeNodeCollection GetFolderTreeNodes()
         {
             var treeNodes = new TreeNodeCollection();
@@ -89,24 +78,39 @@ namespace Our.Umbraco.FilePicker.Controllers
             return treeNodes;
         }
 
-        private TreeNode CreateFileTreeNode(FileInfo file)
+        private TreeNodeCollection GetFileTreeNodes()
         {
-            string virtualPath = file.FullName.Replace(_rootPath, _rootVirtualPath).Replace("\\", "/");
+            var treeNodes = new TreeNodeCollection();
+            var files = GetFiles(_currentPath, _fileExtensionFilters).OrderBy(f => f.Name);
 
-            return CreateTreeNode(virtualPath, _currentVirtualPath, _queryStrings, file.Name, "icon-document", false);
+            treeNodes.AddRange(files.Select(file => CreateFileTreeNode(file)));
+
+            return treeNodes;
         }
 
         private TreeNode CreateFolderTreeNode(DirectoryInfo dir)
         {
-            string virtualPath = dir.FullName.Replace(_rootPath, _rootVirtualPath).Replace("\\", "/");
+            string virtualPath = GetVirtualPath(dir.FullName);
             bool hasChildren = dir.EnumerateDirectories().Any() || !_isFolderPicker && GetFiles(dir, _fileExtensionFilters).Any();
 
             return CreateTreeNode(virtualPath, _currentVirtualPath, _queryStrings, dir.Name, "icon-folder", hasChildren);
         }
 
+        private TreeNode CreateFileTreeNode(FileInfo file)
+        {
+            string virtualPath = GetVirtualPath(file.FullName);
+
+            return CreateTreeNode(virtualPath, _currentVirtualPath, _queryStrings, file.Name, "icon-document", false);
+        }
+
         protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
         {
             return null;
+        }
+
+        private string GetVirtualPath(string physicalPath)
+        {
+            return physicalPath.Replace(_rootPath, _rootVirtualPath).Replace("\\", "/");
         }
 
         public IEnumerable<DirectoryInfo> GetAllDirectories(string path)
